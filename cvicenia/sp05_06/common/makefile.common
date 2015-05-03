@@ -1,0 +1,17 @@
+CFLAGS = -Wall 
+
+%.o:%.c
+	gcc $(CFLAGS) -c -o $@ $<
+
+%:%.o
+	gcc -o $@ $^
+
+%.h:
+	touch $@ 
+
+.PHONY: all clean common
+
+common:
+	cd ../common && make
+
+
