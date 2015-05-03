@@ -9,6 +9,8 @@
 **Ako ukladat programy:**
 
 /blok1
+
 ------/zadanie1
+
 ------/zadanie2
 ...
