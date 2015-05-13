@@ -10,20 +10,18 @@
 #include <signal.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <time.h>
 
-#define FIFO_NAME "fifo-sp02"
+#define FIFO_NAME "fifo-sp06"
 
 char file_path[PATH_MAX + 1];
-int count_ = 0;
-int n_days;
+int  id_ = 0;
 
-void child(){
+int child(){
 	int fifo;
         fprintf(stderr, "Zadajte cestu k priecinku:");
         scanf("%100s", (char*)&file_path);
 
-	if(kill(getppid(), SIGUSR1) != 0 ){
+    	if(kill(getppid(), SIGUSR1) != 0 ){
 		perror("kill");
 		exit(EXIT_FAILURE);
 	}
@@ -49,11 +47,12 @@ void child(){
 		perror("close");
 		exit(EXIT_FAILURE);
 	}
+	return 1;
 }
 
 void printHelpAndExit(FILE* stream, int exitCode){
-	fprintf(stream, "Usage: parametre [-h | --help] <pocet_dni>  [-c | --count] [<dir>]\n");
-	fprintf(stream, "Program vypise mena vsetkych regularne subory v adresarovej strukture, ku ktorym bol pristup za menej ako <pocet_dni> dni. Ak je definovany prepinac, zobrazi iba ich pocet\n");
+	fprintf(stream, "Usage: parametre [-h] [-i | --id] [<dir>]\n");
+	fprintf(stream, "Program vypise zoznam vsetkych poloziek adresara v adresarovej strukture. Ak je definovany prepinac, zobrazi sa aj gid a uid\n");
 	exit(exitCode);
 }
 
@@ -87,10 +86,10 @@ void getPathFromChild(){
       			perror("fork");
       			exit(EXIT_FAILURE);
     		default:
-			if(sigwait(&set, &sig_num) != 0){
-				perror("sigwait");
-				exit(EXIT_FAILURE);
-			}
+				if(sigwait(&set, &sig_num) != 0){
+					perror("sigwait");
+					exit(EXIT_FAILURE);
+				}
       			break;
   	}
 	//FIFO
@@ -120,38 +119,31 @@ void parseArgs(int argc, char * argv[]) {
 	int opt;
 
 	static struct option long_options[] = {    		  {"help", 0, NULL, 'h'},
-                   						  {"count", 0, NULL, 'c'},
+                   						  {"id", 0, NULL, 'i'},
                    						  {0, 0, 0, 0}
                							  };
 	int option_index = 0;
-	
-	if(argc < 2)
-		printHelpAndExit(stderr, EXIT_FAILURE);
 
-	n_days = atoi(argv[1]);
-	
 	do {
-		opt = getopt_long(argc, argv, "hc", long_options, &option_index);
+		opt = getopt_long(argc, argv, "hi", long_options, &option_index);
 
 		switch (opt) {
 		case 'h':
 			printHelpAndExit(stderr, EXIT_SUCCESS);	
 			break;
-		case 'c':
-			count_ = 1;
+		case 'i':
+			id_ = 1;
 			break;
 		case '?': 	
 			fprintf(stderr,"Neznama volba -%c\n", optopt);
 			printHelpAndExit(stderr, EXIT_FAILURE);
-		//case ':':
-		//	n_days = atoi(optarg);
 		default:
 			break;
 		}
 		
 	} while(opt != -1);
 
-	if(optind + 1 < argc ) {
+	if(optind < argc ) {
 		strncpy(file_path, argv[argc - 1], sizeof(file_path));
 	} else {
 		getPathFromChild();
@@ -161,8 +153,8 @@ void parseArgs(int argc, char * argv[]) {
 void readDir(char* dir){
 	DIR* directory;
 	struct dirent* entry;
-	int count = 0;
 	size_t length;
+	
 	length = strlen(dir);
 	if (dir[length - 1] != '/') {
     		dir[length] = '/';
@@ -177,12 +169,31 @@ void readDir(char* dir){
 	struct stat st;
 	char file[PATH_MAX + 1];
 	strcpy(file, dir);
-	time_t my_time;
-	time(&my_time);
-	time_t n_sec = n_days * 24 * 3600;
+	fprintf(stderr, "%s\n", dir);
+
 	while(( entry = readdir(directory)) != NULL) {
 		if(strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0){
-    			strncpy(file + length, entry->d_name, sizeof(file) - length);
+			strncpy(file + length, entry->d_name, sizeof(file) - length);
+    			lstat (file, &st);
+			if(id_)
+				fprintf(stderr, "\tuid:%i gid:%i %s\n", st.st_uid, st.st_gid,  entry->d_name); //vypisem kazdu polozku
+			else 
+				fprintf(stderr, "\t%s\n", entry->d_name); //vypisem kazdu polozku
+		}
+	}
+	if(closedir(directory) != 0 ) {
+		perror("closedir");
+		exit(EXIT_FAILURE);
+	}
+	//Jednoduchie ako posielat signaly a pamatat si pocet deti...
+	if((directory = opendir(dir)) == NULL){
+		perror("opendir");
+		exit(EXIT_FAILURE);
+	}
+	strcpy(file, dir);
+	while(( entry = readdir(directory)) != NULL) {
+		if(strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0){  			
+			strncpy(file + length, entry->d_name, sizeof(file) - length);
     			lstat (file, &st);
 			if(S_ISDIR (st.st_mode)){
 				pid_t pid = fork(); //musi byt aby sme mohli rekurzivne volat(nemoze byt otvorenzch tolko dir jednym porcesom
@@ -193,19 +204,8 @@ void readDir(char* dir){
 					wait(NULL);
 				}
 			}
-			if(S_ISREG (st.st_mode)){
-				if((my_time - st.st_mtim.tv_sec) < n_sec){
-					if(count_){
-						count++;
-					} else {
-						fprintf(stderr, "%s\n", file);
-					}
-				}
-			}
 		}
 	}
-	if(count_)
-		fprintf(stderr, "# of reg files in %s modified less than %i is %i\n", dir, n_days, count);
 	if(closedir(directory) != 0 ) {
 		perror("closedir");
 		exit(EXIT_FAILURE);
@@ -215,9 +215,9 @@ void readDir(char* dir){
 int main(int argc, char * argv[]){
 
 	parseArgs(argc, argv);
-//	while(1){
-	readDir(file_path);
-//		getPath();
-//	}
+	while(1){
+		readDir(file_path);
+		getPath();
+	}
 	return EXIT_SUCCESS;
 }
