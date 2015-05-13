@@ -25,7 +25,6 @@
 #include <signal.h>
 
 #define FIFO_PATH "/tmp/fiforef"
-sig_atomic_t child_st = 0;
 
 typedef enum{
     UNSET = 0,
@@ -37,6 +36,12 @@ typedef struct {
     int e;
     int n;
 } ARGS;
+
+void printHelpAndExit(FILE* stream, int exitCode){
+    fprintf(stream, "Usage: parametre [-e | --exist] [-n | --not_exist] [<dir>]\n");
+    fprintf(stream, "Program vypise symbolicke linky v adresarovej strukture. Ak su definovane prepinace, zobrazia sa iba tie, ktore ukazuju na existujuci / neexistujuci subor\n");
+    exit(exitCode);
+}
 
 /** 
 * @brief Vynuluje argumenty
@@ -102,13 +107,13 @@ void parseArguments(int argc,char *argv[], ARGS *args) {
 * @param args
 */
 void validateArgs(ARGS *args){
-    if(args->startDir == NULL) {
+    if(strlen(args->startDir) == 0) {
         fprintf(stderr,"Zadajte pociatocny priecinok\n");
-        exit(EXIT_FAILURE);
+        printHelpAndExit(stderr, EXIT_FAILURE);
     }
     if(args->e == SET && args->n == SET) {
         fprintf(stderr,"Vyberte si iba jednu volbu z -e alebo -n\n");
-        exit(EXIT_FAILURE);
+        printHelpAndExit(stderr, EXIT_FAILURE);
     }
 }
 
@@ -194,10 +199,6 @@ void executeChoice(ARGS *args) {
     listDir(args);
 }
 
-void sigHandler(int signal) {
-    wait(NULL);
-    child_st = 1;
-}
 char * getPath() {
     char buf[PATH_MAX];
     printf("Zadaj cestu k novemu priecinku: ");
@@ -209,8 +210,13 @@ void child() {
 
     int fifo;
     char * path = getPath();
+    
+    if(kill(getppid(), SIGUSR1) != 0) {
+        perror("kill");
+        exit(EXIT_FAILURE);
+    }
+    
     umask(0);
-
     if(mkfifo(FIFO_PATH, 0660) == -1 && errno != EEXIST) {
         perror("mkfifo");
         exit(EXIT_FAILURE);
@@ -278,10 +284,14 @@ void getPathFromChild(ARGS *args) {
 
     if(choice == 'n') exit(EXIT_SUCCESS);
 
-    struct sigaction sa;
-    memset(&sa,0, sizeof(sigaction));
-    sa.sa_handler = &sigHandler;
-    sigaction(SIGCHLD, &sa, NULL);
+    
+    sigset_t set;
+    int signum;
+    sigaddset(&set, SIGUSR1);
+    if (sigprocmask(SIG_SETMASK, &set, NULL) != 0) {
+        perror("sigprocmask");
+        exit(EXIT_FAILURE);
+    }
     
     pid_t pid;
     
@@ -295,11 +305,13 @@ void getPathFromChild(ARGS *args) {
             child();
             exit(EXIT_SUCCESS);
         default:
+            if (sigwait(&set, &signum) != 0) {
+                perror("sigwait");
+                exit(EXIT_FAILURE);
+            }
             break;
     }
-    parent(args);
-    while(child_st == 0){}
-    child_st = 0; 
+    parent(args); 
 }
 int main(int argc, char *argv[]) {
     ARGS args;
