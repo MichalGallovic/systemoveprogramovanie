@@ -191,9 +191,9 @@ void readDir(char* dir){
 			if(S_ISLNK(st.st_mode)){
 				if(!(exist_ || not_exist_))
 					fprintf(stderr, "%s\n", file);
-				if(exist_ && stat(file, &st) == 0)
+				if(exist_ && access(file, F_OK) == 0)
 					count++;
-				if(not_exist_ && stat(file, &st) == -1 && errno == ENOENT)
+				if(not_exist_ && access(file, F_OK) == -1 && errno == ENOENT)
 					count++; 
 			}
 		}
