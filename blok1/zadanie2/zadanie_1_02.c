@@ -17,16 +17,16 @@
 char file_path[PATH_MAX + 1];
 int count_ = 0;
 int n_days;
-sig_atomic_t child_status = 0;
 
-void handler(int signal_number){
-   wait((int*)&child_status);
-}
-
-int child(){
+void child(){
 	int fifo;
         fprintf(stderr, "Zadajte cestu k priecinku:");
         scanf("%100s", (char*)&file_path);
+
+	if(kill(getppid(), SIGUSR1) != 0 ){
+		perror("kill");
+		exit(EXIT_FAILURE);
+	}
 	//FIFO
 	umask(0);
 	if(	mkfifo(FIFO_NAME, 0660) == -1 && errno != EEXIST){
@@ -49,7 +49,6 @@ int child(){
 		perror("close");
 		exit(EXIT_FAILURE);
 	}
-	return 1;
 }
 
 void printHelpAndExit(FILE* stream, int exitCode){
@@ -66,12 +65,18 @@ void getPath(){
 }
 
 void getPathFromChild(){
-	struct sigaction sa;
 	int fifo;
 	pid_t pid;
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = &handler;
-	sigaction(SIGCHLD, &sa, NULL);
+	int sig_num;
+	sigset_t set;
+	
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1);
+
+	if(sigprocmask(SIG_SETMASK, &set, NULL) != 0){
+		perror("sigprocmask");
+		 exit(EXIT_FAILURE);
+	}
 
 	pid = fork();
   	switch(pid){
@@ -82,7 +87,10 @@ void getPathFromChild(){
       			perror("fork");
       			exit(EXIT_FAILURE);
     		default:
-			while(child_status){}
+			if(sigwait(&set, &sig_num) != 0){
+				perror("sigwait");
+				exit(EXIT_FAILURE);
+			}
       			break;
   	}
 	//FIFO

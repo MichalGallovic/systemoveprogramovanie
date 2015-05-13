@@ -5,7 +5,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/wait.h>
 #include <dirent.h>
 #include <signal.h>
 #include <fcntl.h>
@@ -15,18 +14,16 @@
 
 char file_path[PATH_MAX + 1];
 int  size_ = 0;
-sig_atomic_t child_status = 0;
-
-void handler(int signal_number){
-  //int signal;
-  //wait(&signal);
-   wait((int*)&child_status);
-}
 
 int child(){
 	int fifo;
         fprintf(stderr, "Zadajte cestu k priecinku:");
         scanf("%100s", (char*)&file_path);
+
+    if(kill(getppid(), SIGUSR1) != 0 ){
+		perror("kill");
+		exit(EXIT_FAILURE);
+	}
 	//FIFO
 	umask(0);
 	if(	mkfifo(FIFO_NAME, 0660) == -1 && errno != EEXIST){
@@ -66,13 +63,19 @@ void getPath(){
 }
 
 void getPathFromChild(){
-	struct sigaction sa;
 	int fifo;
 	pid_t pid;
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = &handler;
-	sigaction(SIGCHLD, &sa, NULL);
+	int sig_num;
+	sigset_t set;
+	
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1);
 
+	if(sigprocmask(SIG_SETMASK, &set, NULL) != 0){
+		perror("sigprocmask");
+		 exit(EXIT_FAILURE);
+	}
+	
 	pid = fork();
   	switch(pid){
     		case 0:
@@ -89,7 +92,7 @@ void getPathFromChild(){
 	umask(0); 
 	if(	mkfifo(FIFO_NAME, 0660) == -1 &&  errno != EEXIST){
 		perror("mkfifo");
-		exit(EXIT_SUCCESS);
+		return EXIT_FAILURE;
 	}
 
 	if((fifo = open(FIFO_NAME, O_RDONLY)) == -1) {
