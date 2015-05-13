@@ -171,30 +171,30 @@ int main(int argc, char * argv[]) {
 
 
 
-			if(args.f == SET){
-				printf("dostal som argument f - %s\n", args.fArg);	
+		if(args.f == SET){
+			printf("dostal som argument f - %s\n", args.fArg);	
 
-				pid_t pid = fork();
-			
+			pid_t pid = fork();
 		
-				if (pid==0){
 	
-					char s[30];
-					sprintf(s, "%d", parPid);
+			if (pid==0){
 
-							
-					char *argv[] = {"test", args.fArg, s, NULL};
-					printf("spostam pom program %d\n", parPid);
-					execv(args.pArg, argv);
-	
-					//exit(127); 
-				}else{
-					//waitpid(pid, 0, 0);
-					printf("detske pid je %d\n", pid);
-					outFile(args.fArg, pid, set, sig_number);
-	
-				}			
-			}
+				char s[30];
+				sprintf(s, "%d", parPid);
+
+						
+				char *argv[] = {"test", args.fArg, s, NULL};
+				printf("spostam pom program %d\n", parPid);
+				execv(args.pArg, argv);
+
+				//exit(127); 
+			}else{
+				//waitpid(pid, 0, 0);
+				printf("detske pid je %d\n", pid);
+				outFile(args.fArg, pid, set, sig_number);
+
+			}			
+		}
 		
 	}
 	
