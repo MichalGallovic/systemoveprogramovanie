@@ -25,6 +25,7 @@
 #include <signal.h>
 
 #define FIFO_PATH "/tmp/fiforef"
+sig_atomic_t child_st = 0;
 
 typedef enum{
     UNSET = 0,
@@ -92,14 +93,6 @@ void parseArguments(int argc,char *argv[], ARGS *args) {
     }
 
 }
-
-void printOptions(ARGS * args) {
-    printf("vypis parametrov programu:\n");
-    printf("    e: %s\n", args->e==SET?"SET":"UNSET");
-    printf("    n: %s\n", args->n==SET?"SET":"UNSET");
-    printf("dir  : %s\n", args->startDir != NULL ? args->startDir : "NULL");
-}
-
 
 /** 
 * @brief Validacia argumentov
@@ -200,25 +193,19 @@ void executeChoice(ARGS *args) {
     }
     listDir(args);
 }
-sig_atomic_t child_st = 0;
+
 void sigHandler(int signal) {
     wait(NULL);
     child_st = 1;
 }
 char * getPath() {
     char buf[PATH_MAX];
-    fprintf(stderr,"Zadaj cestu k novemu priecinku: ");
-    //fgets(path, sizeof(path), stdin);
+    printf("Zadaj cestu k novemu priecinku: ");
     scanf("%s",buf);
     return buf;
 }
 
 void child() {
- //   close(channel[0]);
- //   char *path = getPath();
- //   fprintf(stderr,"child dostal: %s", path);
- //   write(channel[1], path, PATH_MAX);
- //   close(channel[1]);
 
     int fifo;
     char * path = getPath();
@@ -249,19 +236,9 @@ void child() {
 
 
 void parent(ARGS *args) {
- //   close(channel[1]);
     char path[PATH_MAX];
- //   size_t res;
- //   if(res =read(channel[0], path,sizeof(path)));
- //   if(res != PATH_MAX) {
- //       fprintf(stderr,"path: %s read: %d should: %d", path, res, sizeof(path));
- //       exit(EXIT_FAILURE);
- //   }
- //   int length = strlen(path);
- //   strncpy(args->startDir, path, length);
- //   args->startDir[length] = '\0';
- //   close(channel[0]);
     int fifo;
+
     umask(0);
     if(mkfifo(FIFO_PATH, 0660) == -1 && errno != EEXIST) {
         perror("mkfifo");
@@ -281,21 +258,32 @@ void parent(ARGS *args) {
     }
     
     size_t len = strlen(path);
+    // clear startDir & set to new from child
     memset(args->startDir,'\0',PATH_MAX);
     strncpy(args->startDir, path, len);
 }
+/** 
+* @brief Ziska cestu od childa - komunikacia cez FIFO
+* 
+* @param args
+*/
 void getPathFromChild(ARGS *args) {
+
+    printf("Chces prehladavat dalsi subor? [y/n]: ");
+    char choice, temp;
+    choice = temp = getchar();
+    // nechceme newliny
+    while(temp != '\n' && temp!= EOF)
+        temp = getchar();
+
+    if(choice == 'n') exit(EXIT_SUCCESS);
+
     struct sigaction sa;
     memset(&sa,0, sizeof(sigaction));
     sa.sa_handler = &sigHandler;
     sigaction(SIGCHLD, &sa, NULL);
     
     pid_t pid;
-    int channel[2];
-    if(pipe(channel) == -1) {
-        perror("pipe");
-        exit(EXIT_FAILURE);
-    }
     
     pid = fork();
 
@@ -304,14 +292,14 @@ void getPathFromChild(ARGS *args) {
             perror("fork");
             exit(EXIT_FAILURE);
         case 0:
-            child(channel);
+            child();
             exit(EXIT_SUCCESS);
         default:
             break;
     }
     parent(args);
     while(child_st == 0){}
-    
+    child_st = 0; 
 }
 int main(int argc, char *argv[]) {
     ARGS args;
@@ -319,7 +307,6 @@ int main(int argc, char *argv[]) {
     validateArgs(&args);
 
     while(1) {
-        printOptions(&args);
         executeChoice(&args);
         getPathFromChild(&args);
     }
