@@ -198,37 +198,12 @@ int main(int argc, char * argv[]) {
 		
 	}
 	
-	
-
-//
-/*
 	printf("som tu\n");
 	while(1){
 		sigwait(&set, &sig_number);
 		printf("test test\n");
 		sleep(1);
 	}
-*/
-	//wait(&child_status);
+
 	return EXIT_SUCCESS;
 }
-
-/*	
-	pid_t pid = fork();
-	if(pid==-1){
-		perror("fork");
-		exit(1);
-	}else if(pid==0){	
-
-		if(close(pfd[0])==-1)
-			perror("close 1");
-
-//		printf("dup2= %d", dup2(pfd[1], 0));
-
-		if(dup2(pfd[1], 1) == -1)
-			perror("dup2 1");
-
-//		printf("som na ls\n");
-
-		if(close(pfd[1])==-1)
-			perror("close 2");*/
