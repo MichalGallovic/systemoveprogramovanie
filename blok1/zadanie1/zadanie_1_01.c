@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <dirent.h>
 #include <signal.h>
 #include <fcntl.h>
@@ -75,7 +76,7 @@ void getPathFromChild(){
 		perror("sigprocmask");
 		 exit(EXIT_FAILURE);
 	}
-	
+
 	pid = fork();
   	switch(pid){
     		case 0:
@@ -85,14 +86,17 @@ void getPathFromChild(){
       			perror("fork");
       			exit(EXIT_FAILURE);
     		default:
-			while(child_status){}
+				if(sigwait(&set, &sig_num) != 0){
+					perror("sigwait");
+					exit(EXIT_FAILURE);
+				}
       			break;
   	}
 	//FIFO
 	umask(0); 
 	if(	mkfifo(FIFO_NAME, 0660) == -1 &&  errno != EEXIST){
 		perror("mkfifo");
-		return EXIT_FAILURE;
+		exit(EXIT_FAILURE);
 	}
 
 	if((fifo = open(FIFO_NAME, O_RDONLY)) == -1) {
