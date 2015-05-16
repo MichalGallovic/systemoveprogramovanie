@@ -33,15 +33,16 @@ union semun {
                                 (Linux-specific) */
 };
 
-void deleteMaped(){ 	
+void deleteMaped(int flag){ 	
 	CHECK(close(fileDescr) != -1);
-	CHECK(unlink(file_name) != -1);
+	if (flag) CHECK(unlink(file_name) != -1);
 } 
 
 void deleteSem(){ CHECK(semctl(semId, 0, IPC_RMID) != -1);}
 
 void createMaped(size_t size){
-	CHECK((fileDescr = mkstemp(file_name)) != -1);
+	//CHECK((fileDescr = mkstemp(file_name)) != -1);
+	CHECK((fileDescr = open	(file_name, O_RDWR | O_CREAT | O_EXCL | 0644)) != -1);
 	CHECK(lseek(fileDescr, size, SEEK_SET) != -1);
 	CHECK(write(fileDescr, "", 1) != -1 );
 }
@@ -79,9 +80,9 @@ void init(int semnum, char* filename){
 	memcpy(buf, &buffer, 1);
 }
 
-void teardown(){
+void teardown(int flag){ // aby som vedel ci to mam vymazat
 	CHECK(munmap((void *) buf, MAX_SIZE) != -1);
-	deleteMaped();
+	deleteMaped(flag);
 	deleteSem();
 }
 

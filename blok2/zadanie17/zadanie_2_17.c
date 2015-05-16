@@ -26,16 +26,19 @@ typedef struct {
 	OPTION n;
 	char * nproc;
 	int n_proc;
+	OPTION f;
+	char * file_name;
 } ARGS;
 
 int quit = 1;
  
 void printHelpAndExit(FILE* stream, int exitCode){
-	fprintf(stream, "Usage: parametre [-h] [-n | --n_proc <N>] \n");
+	fprintf(stream, "Usage: parametre [-h] [-n | --n_proc <N>] -f | -file <file>\n");
 	fprintf(stream, "Zadanie 2-01\n");
 	fprintf(stream, "Prepinace:\n");
 	fprintf(stream, " -h, --help   vypise help\n");
 	fprintf(stream, " -n, --n_proc pocet procesov\n");
+	fprintf(stream, " -f, --file nazov suboru, do ktoreho sa to ma zapisat\n");
 	exit(exitCode);
 }
 
@@ -46,16 +49,19 @@ void parseArgs(int argc, char * argv[], ARGS * args) {
 	args->n = UNSET;
 	args->nproc = NULL;
 	args->n_proc = 4;
+	args->f = UNSET;
+	args->file_name = NULL;
 	
 	static struct option long_options[] = {
                    						  {"help", 0, NULL, 'h'},
-                   						  {"n_proc", 0, NULL, 'n'},
+                   						  {"n_proc", 1, NULL, 'n'},
+                   						  {"file", 1, NULL, 'f'},
                    						  {0, 0, 0, 0}
                							  };
 	int option_index = 0;
 
 	do {
-		opt = getopt_long(argc, argv, ":hn:", long_options, &option_index);
+		opt = getopt_long(argc, argv, ":hn:f:", long_options, &option_index);
 		switch (opt) {
 		case 'h':
 			args->h = SET;
@@ -64,6 +70,10 @@ void parseArgs(int argc, char * argv[], ARGS * args) {
 		case 'n':
 			args->n = SET;
 			args->nproc = optarg;
+			break;
+		case 'f':
+			args->f = SET;
+			args->file_name = optarg;
 			break;
 		case '?': 	
 			fprintf(stderr,"Neznama volba -%c\n", optopt);
@@ -79,6 +89,7 @@ void parseArgs(int argc, char * argv[], ARGS * args) {
 
 	while(optind < argc ) {
 		printf("Debug:    non-option ARGV-element: %s\n", argv[optind++]);
+		printHelpAndExit(stderr, EXIT_FAILURE);
 	}
 }
 
@@ -92,6 +103,14 @@ void validateArgs(ARGS * args) {
 			fprintf(stderr, "Argument prepinaca -n musi byt vacsi ako 4\n");
 			printHelpAndExit(stderr, EXIT_FAILURE);
 		}	
+	}
+	if(args->f != SET){
+		fprintf(stderr, "Prepinac -f je povinny\n");
+		printHelpAndExit(stderr, EXIT_FAILURE);	
+	}
+	if(args->f == SET && args->file_name == NULL){
+		fprintf(stderr, "Argument prepinaca -f nebol zadany\n");
+		printHelpAndExit(stderr, EXIT_FAILURE);	
 	}
 }
 
@@ -121,7 +140,7 @@ void doWork(int position, int position1){
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = &ChildSignalHandler;
 	CHECK(sigaction(SIGUSR1, &sa, NULL) ==  0);
-	
+
 	while(quit){
 		lockSem(position);
 		read_((char*)&buf1); //precita obsah pamate
@@ -180,12 +199,11 @@ int main(int argc, char * argv[]){
 	pid_t *pid;
 	int i = 0;
 	char buf[4096];
-	char file_name[] = "/tmp/zadanie17XXXXXX";
 
 	parseArgs(argc, argv, &args);
 	validateArgs(&args);
 
-	init(args.n_proc, (char*)&file_name);
+	init(args.n_proc, args.file_name);
 
 	pid = (pid_t*)malloc(sizeof(pid_t) * args.n_proc); 	
 	createProc(args.n_proc, pid);
@@ -210,7 +228,7 @@ int main(int argc, char * argv[]){
 	read_((char*)&buf);
 	fprintf(stderr, "%s\n", buf);
 	
-	teardown();
+	teardown(0);
 	free(pid);
 	printf("detske procesy ukoncene\n");
 	return EXIT_SUCCESS;
