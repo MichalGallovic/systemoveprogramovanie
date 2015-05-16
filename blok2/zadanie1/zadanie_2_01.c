@@ -29,7 +29,6 @@ typedef struct {
 	int n_proc;
 } ARGS;
 
-int flag = 0;
 int quit = 1;
  
 void printHelpAndExit(FILE* stream, int exitCode){
@@ -124,16 +123,18 @@ void doWork(int position, int position1){
 	sa.sa_handler = &ChildSignalHandler;
 	CHECK(sigaction(SIGUSR1, &sa, NULL) ==  0);
 	while(quit){
-		if(flag)// toto treba inac riesit len som nato prilis hlupy(aspon prave teraz)	
-			lockSem(position);
-		if(!flag) flag = 1;
-		read_((char*)&buf1);
-		sprintf((char*)&temp, "%u\n", getpid());
-		strcat((char*)&buf, (char*)&buf1);
+		lockSem(position);
+		read_((char*)&buf1); //precita obsah pamate
+		sprintf((char*)&temp, "%u\n", getpid()); ///vytvori string z PID
+		// fprintf(stderr, "PID:%s", temp);
+		strcat((char*)&buf, (char*)&buf1); //spoji dokopy
+		// fprintf(stderr, "@SHARED:%s", buf);
 		strcat((char*)&buf, (char*)&temp);
+		// fprintf(stderr, "2SHARED:%s", buf);
 		write_((char*)&buf, strlen(buf));
-		usleep(1000000);
+		sleep(1);
 		unlockSem(position1);
+		buf[0] = '\0'; //premazanie
 	}
 	fprintf(stderr, "Killed %u\n", getpid());
 }
@@ -156,6 +157,7 @@ void createProc(int number, pid_t* pid_array){
 		array[i] = i;
 	shuffle(array, number);
 
+	unlockSem(array[0]); //aby mohol prvy bezat
 	for(i = 0; i < number; ++i){
 		switch(pid = fork()){
 			case 0:
