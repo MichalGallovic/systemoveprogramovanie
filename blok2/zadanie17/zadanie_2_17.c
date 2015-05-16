@@ -108,20 +108,20 @@ void shuffle(int *array, size_t n){
 }
 
 void ChildSignalHandler(){
-	fprintf(stderr, "Killed %u\n", getpid());
 	quit = 0;
 }
 
 void doWork(int position, int position1){
 	char buf[4096];
 	char buf1[4096];
-	char temp[6];
+	char temp[20];
 	struct sigaction sa;
 	buf[0] = '\0';
 	
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = &ChildSignalHandler;
 	CHECK(sigaction(SIGUSR1, &sa, NULL) ==  0);
+	
 	while(quit){
 		lockSem(position);
 		read_((char*)&buf1); //precita obsah pamate
@@ -139,6 +139,7 @@ void doWork(int position, int position1){
 	fprintf(stderr, "Killed %u\n", getpid());
 }
 
+//vracia poziciu nasledujuceho v poli, ak je posledny tak prveho
 int getNext(int* array, int position, int max){
 	if(position == max)
 		return array[0];
@@ -157,18 +158,18 @@ void createProc(int number, pid_t* pid_array){
 		array[i] = i;
 	shuffle(array, number);
 
-	unlockSem(array[0]); //aby mohol prvy bezat
+	unlockSem(0); //aby mohol prvy bezat
 	for(i = 0; i < number; ++i){
 		switch(pid = fork()){
 			case 0:
-      				doWork(array[i], getNext(array, i + 1, number));
+      			doWork(array[i], getNext(array, i + 1, number));
 				exit(EXIT_SUCCESS);
-    			case -1:
-      				perror("fork");
-      				exit(EXIT_FAILURE);
-    			default:
+    		case -1:
+      			perror("fork");
+      			exit(EXIT_FAILURE);
+    		default:
 				pid_array[i] = pid;
-      				break;
+      			break;
 		}
 	}
 	free(array);
