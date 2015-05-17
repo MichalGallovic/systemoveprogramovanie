@@ -1,0 +1,7 @@
+prvy riadok
+druhy riadok
+treti riadok
+stvrty riadok
+piaty riadok
+siesty riadok
+koniec
