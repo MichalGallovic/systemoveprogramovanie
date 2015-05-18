@@ -15,6 +15,7 @@ typedef struct {
 } ARGS;
 
 int quit = 1;
+int orderCounter  = 0;
 
 void printHelpAndExit(FILE* stream, int exitCode){
     fprintf(stream, "Usage: parametre [-h] [-n <N>] [-t <text>]\n");
@@ -99,45 +100,91 @@ void ChildSignalHandler(int signal_num){
     quit = 0;
 }
 
-void doWork(char *text){
-    char buf[4096];
+void printNthLineFromShm(int nth) {
+    char buff[4096];
+    int newLinesCount  = 0;
+    int offset = 0;
+    read_((int*)buff);
+    unsigned int i;
+    for(i = 0; i< strlen(buff); i++) {
+        if(buff[i] == '\n')
+            newLinesCount++;
+        offset++;
+        if(newLinesCount == nth) break;
+    }
+
+    memset(buff,'\0',4096);
+
+    readWithOffset_((int*)buff,offset);
+    fprintf(stderr,"PID: %d %s",getpid(),buff);
+}
+
+int getProcOrder() {
+     // kazdy zapis je na novom riadku
+    // skipneme n '\n'
+    char buff[4096];
+    int newLinesCount  = 0;
+    read_((int*)buff);
+    unsigned int i;
+    for(i = 0; i< strlen(buff); i++) {
+        if(buff[i] == '\n')
+            newLinesCount++;
+    }
+
+    return newLinesCount;
+}
+
+int getProcSem(int num, int count) {
+    if((num+1) == count) return count;
+    return ((num+1)%count);
+}
+
+void doWork(char *text, int count){
+    char bufer[4096];
     char buf1[4096];
     char temp[20];
     struct sigaction sa;
-    buf[0] = '\0';
+    bufer[0] = '\0';
+    int order = 0;
 
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = &ChildSignalHandler;
     CHECK(sigaction(SIGUSR1, &sa, NULL) ==  0);
 
     lockMutex();
-    read_((char*)&buf1); //precita obsah pamate
+    read_((int*)&buf1); //precita obsah pamate
     sprintf((char*)&temp, "PID: %u %s\n", getpid(), text); ///vytvori string z PID
-    fprintf(stderr, "%s", temp);
-    strcat((char*)&buf, (char*)&buf1); //spoji dokopy
+    strcat((char*)&bufer, (char*)&buf1); //spoji dokopy
     // fprintf(stderr, "@SHARED:%s", buf);
-    strcat((char*)&buf, (char*)&temp);
-    fprintf(stderr, "2SHARED:%s", buf);
-    write_((char*)&buf, strlen(buf));
-    //sleep(1);
+    strcat((char*)&bufer, (char*)&temp);
+    //fprintf(stderr, "2SHARED:%s", buf);
+    write_((int*)&bufer, strlen(bufer));
+    order = getProcOrder();
+    usleep(100000);
     unlockMutex();
+    fprintf(stderr,"%d %d\n", order, getProcSem(order, count));
+    while(quit) {
+        lockSem(order);
+        printNthLineFromShm(order);
+        usleep(100000);
+        unlockSem(getProcSem(order, count));
+    }
 }
-////vracia poziciu nasledujuceho v poli, ak je posledny tak prveho
-//int getNext(int* array, int position, int max){
-//    if(position == max)
-//        return array[0];
-//    else 
-//        return array[position];
-//}
+//vracia poziciu nasledujuceho v poli, ak je posledny tak prveho
+int getNext(int* array, int position, int count){
+    return array[(position+1) % count];
+}
 void createProc(int number, pid_t* pid_array, char *text){
    int i = 0;
    pid_t pid;
+    
    unlockMutex();
-
+   // unlock first process to be able to start reading
+   unlockSem(1);
    for(i = 0; i < number; ++i){
        switch(pid = fork()){
            case 0:
-               doWork(text);
+               doWork(text, number);
                exit(EXIT_SUCCESS);
            case -1:
                perror("fork");
@@ -147,7 +194,6 @@ void createProc(int number, pid_t* pid_array, char *text){
                break;
        }
    }
-
 }
 
 int main(int argc, char * argv[]){
@@ -168,22 +214,23 @@ int main(int argc, char * argv[]){
     ///KILLOVANIE deti
     sigset_t set;
     int sig_num;
-//
-//    sigemptyset(&set);
-//    sigaddset(&set, SIGINT);
-//    CHECK(sigprocmask(/*SIG_BLOCK*/ SIG_SETMASK, &set, NULL) == 0);
-//    CHECK(sigwait(&set, &sig_num) == 0);
-//
-//    for(i = 0; i < args.n_proc; i++){
-//        CHECK(kill(pid[i], SIGUSR1) == 0 );
-//    }
+    
+    sigemptyset(&set);
+    sigaddset(&set, SIGINT);
+    CHECK(sigprocmask(/*SIG_BLOCK*/ SIG_SETMASK, &set, NULL) == 0);
+    CHECK(sigwait(&set, &sig_num) == 0);
+
+    for(i = 0; i < args.n_proc; i++){
+        CHECK(kill(pid[i], SIGUSR1) == 0 );
+    }
 
     for(i = 0; i < args.n_proc; i++){
         CHECK(wait(NULL) != -1);    
     }
-
-    fprintf(stderr,"\nProcesy zapisali do SHM:\n%s",buf);
+    
+    read_((int*)buf);
+    fprintf(stderr,"%s",buf);
     teardown();
-    //free(pid);
+    free(pid);
     return EXIT_SUCCESS;
 }

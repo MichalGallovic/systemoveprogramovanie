@@ -1,7 +1,0 @@
-Zoznam aktualnych procesov:
-USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
-xkyselm   4562  0.0  0.1   5208  2184 pts/3    Rs   14:08   0:00 -bash
-xkyselm   4570  0.0  0.1   5208  2168 pts/4    Ss   14:08   0:00 -bash
-xkyselm   4888  0.0  0.0   3816  1224 pts/4    S+   14:32   0:00 man 3 exec
-xkyselm   4901  0.0  0.0   3832  1048 pts/4    S+   14:32   0:00 pager -s
-xkyselm   4949  0.0  0.0   4456  1488 pts/3    R+   14:38   0:00 ps u

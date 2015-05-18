@@ -58,7 +58,7 @@ void init(int semnumber) {
     createSem(semnumber);
     CHECK((buf = (char*)shmat(shmId,NULL,0)) != (char*) -1);
     int buffer = '\0';
-    memset(buf, &buffer,1);
+    memset(buf, buffer,1);
 
 }
 
@@ -91,5 +91,9 @@ void write_(int *buffer, size_t size) {
     memcpy(buf, buffer, size);
 }
 void read_(int* buffer) {
-    memcpy(buffer, buf, sizeof(int));
+    memcpy(buffer, buf, strlen(buf));
+}
+
+void readWithOffset_(int*buffer, int offset) {
+    memcpy(buffer, buf+offset, strlen(buf)-offset);
 }
