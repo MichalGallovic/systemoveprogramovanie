@@ -1,0 +1,83 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!-- saved from url=(0045)http://sp.useobjects.net/cv03/adresare.c.html -->
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>adresare.c.html</title>
+
+<meta name="generator" content="SynEdit HTML exporter">
+<style type="text/css">
+<!--
+body { color: #000000; background-color: #FFFFFF; }
+.cpp1-assembler { }
+.cpp1-brackets { }
+.cpp1-comment { color: #616161; font-style: italic; }
+.cpp1-float { color: #000080; }
+.cpp1-hexadecimal { color: #000080; }
+.cpp1-character { }
+.cpp1-identifier { }
+.cpp1-illegalchar { }
+.cpp1-number { color: #000080; }
+.cpp1-octal { color: #0000FF; }
+.cpp1-preprocessor { color: #008040; }
+.cpp1-reservedword { color: #0000FF; }
+.cpp1-space { color: #008080; font-style: italic; }
+.cpp1-string { color: #800000; }
+.cpp1-symbol { }
+-->
+</style>
+</head>
+<body>
+<pre><code><span style="font: 10pt Courier New;"><span class="cpp1-preprocessor">#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;dirent.h&gt;
+#include &lt;string.h&gt;
+
+</span><span class="cpp1-comment">//Funkcia vypise obsah adresara 'dirName'
+//Do kazdeho riadku vypise nazov suboru, medzeru, nazov suboru aj s cestov
+//Vstup: 'dirName' - nazov adresara
+//Vystup: EXIT_SUCCESS v pripade uspesneho vykonania, inak EXIT_FAILIRE
+</span><span class="cpp1-reservedword">int</span><span class="cpp1-space"> </span><span class="cpp1-identifier">listDir(</span><span class="cpp1-reservedword">char</span><span class="cpp1-space"> </span><span class="cpp1-symbol">*</span><span class="cpp1-space"> </span><span class="cpp1-identifier">dirName)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">DIR</span><span class="cpp1-space"> </span><span class="cpp1-symbol">*</span><span class="cpp1-space"> </span><span class="cpp1-identifier">dir;</span><span class="cpp1-space"> </span><span class="cpp1-comment">//adresar
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">struct</span><span class="cpp1-space"> </span><span class="cpp1-identifier">dirent</span><span class="cpp1-space"> </span><span class="cpp1-symbol">*</span><span class="cpp1-space"> </span><span class="cpp1-identifier">entry;</span><span class="cpp1-space"> </span><span class="cpp1-comment">//polozka adresara
+</span><span class="cpp1-space">	
+	</span><span class="cpp1-identifier">dir</span><span class="cpp1-space">  </span><span class="cpp1-symbol">=</span><span class="cpp1-space"> </span><span class="cpp1-identifier">opendir(dirName);
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">if</span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">dir</span><span class="cpp1-space"> </span><span class="cpp1-symbol">==</span><span class="cpp1-space"> </span><span class="cpp1-identifier">NULL</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">perror(</span><span class="cpp1-string">"opendir"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">		</span><span class="cpp1-reservedword">return</span><span class="cpp1-space"> </span><span class="cpp1-identifier">EXIT_FAILURE;
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">while</span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(entry</span><span class="cpp1-space"> </span><span class="cpp1-symbol">=</span><span class="cpp1-space"> </span><span class="cpp1-identifier">readdir(dir))</span><span class="cpp1-space"> </span><span class="cpp1-symbol">!=</span><span class="cpp1-space"> </span><span class="cpp1-identifier">NULL</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-20s"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">entry-&gt;d_name);</span><span class="cpp1-space"> </span><span class="cpp1-comment">//vypis nazvu suboru
+
+</span><span class="cpp1-space">		</span><span class="cpp1-comment">//dalsie informacie mozeme ziskavat pomocou stat/lstat, 
+</span><span class="cpp1-space">		</span><span class="cpp1-comment">//ak ide o adresar funkciu mozeme volat rekurizvne
+</span><span class="cpp1-space">		</span><span class="cpp1-comment">//najprv potrebujeme (do premennej entryPath) zostavit cestu ku polozke adresara
+</span><span class="cpp1-space">		</span><span class="cpp1-reservedword">int</span><span class="cpp1-space"> </span><span class="cpp1-identifier">entryPathLength</span><span class="cpp1-space"> </span><span class="cpp1-symbol">=</span><span class="cpp1-space"> </span><span class="cpp1-identifier">strlen(dirName)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">+</span><span class="cpp1-space"> </span><span class="cpp1-identifier">strlen(entry-&gt;d_name)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">+</span><span class="cpp1-space"> </span><span class="cpp1-number">2</span><span class="cpp1-symbol">;</span><span class="cpp1-space"> 
+		</span><span class="cpp1-reservedword">char</span><span class="cpp1-space"> </span><span class="cpp1-symbol">*</span><span class="cpp1-space"> </span><span class="cpp1-identifier">entryPath</span><span class="cpp1-space"> </span><span class="cpp1-symbol">=</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-reservedword">char</span><span class="cpp1-space"> </span><span class="cpp1-symbol">*)</span><span class="cpp1-space"> </span><span class="cpp1-identifier">malloc(entryPathLength</span><span class="cpp1-space"> </span><span class="cpp1-symbol">*</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">sizeof</span><span class="cpp1-brackets">(</span><span class="cpp1-reservedword">char</span><span class="cpp1-brackets">));</span><span class="cpp1-space"> 
+		</span><span class="cpp1-identifier">sprintf(entryPath,</span><span class="cpp1-space"> </span><span class="cpp1-string">"%s/%s"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">dirName,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">entry-&gt;d_name);
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">" %s\n"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">entryPath);
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">free(entryPath);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">closedir(dir);
+
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">return</span><span class="cpp1-space"> </span><span class="cpp1-identifier">EXIT_SUCCESS;
+}
+
+</span><span class="cpp1-comment">//Program vypise obsah adresara, ktory je argumentom programu
+</span><span class="cpp1-reservedword">int</span><span class="cpp1-space"> </span><span class="cpp1-identifier">main(</span><span class="cpp1-reservedword">int</span><span class="cpp1-space"> </span><span class="cpp1-identifier">argc,</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">char</span><span class="cpp1-space"> </span><span class="cpp1-symbol">*argv[])</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">if</span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">argc</span><span class="cpp1-space"> </span><span class="cpp1-symbol">==</span><span class="cpp1-space"> </span><span class="cpp1-number">2</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">listDir(argv[</span><span class="cpp1-number">1</span><span class="cpp1-brackets">]);
+</span><span class="cpp1-space">		</span><span class="cpp1-reservedword">return</span><span class="cpp1-space"> </span><span class="cpp1-identifier">EXIT_SUCCESS;
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">fprintf(stderr,</span><span class="cpp1-space"> </span><span class="cpp1-string">"%s: chybny pocet argumentov\n"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">argv[</span><span class="cpp1-number">0</span><span class="cpp1-brackets">]);
+</span><span class="cpp1-space">		</span><span class="cpp1-reservedword">return</span><span class="cpp1-space"> </span><span class="cpp1-identifier">EXIT_FAILURE;
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+}
+
+
+
+</span></span>
+</code></pre>
+
+</body></html>

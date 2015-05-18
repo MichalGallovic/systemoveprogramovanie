@@ -1,0 +1,235 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!-- saved from url=(0045)http://sp.useobjects.net/cv03/fileInfo.c.html -->
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>fileInfo.c.html</title>
+
+<meta name="generator" content="SynEdit HTML exporter">
+<style type="text/css">
+<!--
+body { color: #000000; background-color: #FFFFFF; }
+.cpp1-assembler { }
+.cpp1-brackets { }
+.cpp1-comment { color: #616161; font-style: italic; }
+.cpp1-float { color: #000080; }
+.cpp1-hexadecimal { color: #000080; }
+.cpp1-character { }
+.cpp1-identifier { }
+.cpp1-illegalchar { }
+.cpp1-number { color: #000080; }
+.cpp1-octal { color: #0000FF; }
+.cpp1-preprocessor { color: #008040; }
+.cpp1-reservedword { color: #0000FF; }
+.cpp1-space { color: #008080; font-style: italic; }
+.cpp1-string { color: #800000; }
+.cpp1-symbol { }
+-->
+</style>
+</head>
+<body>
+<pre><code><span style="font: 10pt Courier New;"><span class="cpp1-preprocessor">#include &lt;stdio.h&gt;
+#include &lt;sys/stat.h&gt; 
+#include &lt;stdlib.h&gt; 
+#include &lt;errno.h&gt; 
+#include &lt;time.h&gt; 
+#include &lt;pwd.h&gt; 
+#include &lt;grp.h&gt; 
+#include &lt;unistd.h&gt; 
+#include &lt;string.h&gt; 
+
+
+</span><span class="cpp1-comment">//Funkcia vypise informacie o subore 'fileName'
+//Je prikladom ziskania informacii pomocou lstat
+//Vstup: 'fileName' - nazov suboru o ktorom sa vypisu informacie
+</span><span class="cpp1-reservedword">void</span><span class="cpp1-space"> </span><span class="cpp1-identifier">printfFileInfo(</span><span class="cpp1-reservedword">char</span><span class="cpp1-space"> </span><span class="cpp1-symbol">*fileName)
+{
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">struct</span><span class="cpp1-space"> </span><span class="cpp1-identifier">stat</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info;
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">struct</span><span class="cpp1-space"> </span><span class="cpp1-identifier">passwd</span><span class="cpp1-space"> </span><span class="cpp1-symbol">*pwd;
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">struct</span><span class="cpp1-space"> </span><span class="cpp1-identifier">group</span><span class="cpp1-space">  </span><span class="cpp1-symbol">*grp;
+
+
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// ziskanie informacii od struktury stat
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// aky je rozdiel medzi tymito funkciami?
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//   int lstat(const char *path, struct stat *buf);
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//   int  stat(const char *path, struct stat *buf);
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">if</span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">lstat(fileName,</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;info)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">==</span><span class="cpp1-space"> </span><span class="cpp1-symbol">-</span><span class="cpp1-number">1</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{
+</span><span class="cpp1-space">	 	</span><span class="cpp1-identifier">fprintf(stderr,</span><span class="cpp1-space"> </span><span class="cpp1-string">"Neviem zistit informacie o \"%s\" (%s)\n"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">fileName,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">strerror(errno)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">exit(EXIT_FAILURE);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+
+
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// nazov
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-20s: %s\n"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-string">"nazov"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">fileName);
+
+
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// typ suboru (1. sposob)
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-20s: "</span><span class="cpp1-symbol">,</span><span class="cpp1-string">"typ (1. sposob)"</span><span class="cpp1-brackets">);
+
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space">      </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFMT</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">==</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFBLK</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space"> </span><span class="cpp1-comment">// Block special
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"block special file"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFMT</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">==</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFCHR</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space"> </span><span class="cpp1-comment">// Character special
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"character special file"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFMT</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">==</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFIFO</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space"> </span><span class="cpp1-comment">// FIFO special
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"pipe or FIFO special file"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFMT</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">==</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFREG</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space"> </span><span class="cpp1-comment">// Regular
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"regular file"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFMT</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">==</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFDIR</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space"> </span><span class="cpp1-comment">// Directory
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"directory"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFMT</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">==</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFLNK</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space"> </span><span class="cpp1-comment">// Symbolic link
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"symbolic link"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFMT</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">==</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IFSOCK</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space"> </span><span class="cpp1-comment">// Socket
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"socket"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"\n"</span><span class="cpp1-brackets">);
+
+
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// typ suboru (2. sposob)
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-20s: "</span><span class="cpp1-symbol">,</span><span class="cpp1-string">"typ (2. sposob)"</span><span class="cpp1-brackets">);
+
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">if</span><span class="cpp1-brackets">(</span><span class="cpp1-space">	</span><span class="cpp1-identifier">S_ISBLK(info.st_mode)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space">        </span><span class="cpp1-comment">//block special file
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"block special file"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">if</span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_ISCHR(info.st_mode)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space">   </span><span class="cpp1-comment">//character special file
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"character special file"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_ISDIR(info.st_mode)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space">  </span><span class="cpp1-comment">//directory.
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"directory"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_ISFIFO(info.st_mode)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space"> </span><span class="cpp1-comment">//pipe or FIFO special file.
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"pipe or FIFO special file"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_ISREG(info.st_mode)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space">  </span><span class="cpp1-comment">//regular file.
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"regular file"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_ISLNK(info.st_mode)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space">  </span><span class="cpp1-comment">//symbolic link.
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"symbolic link"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_ISSOCK(info.st_mode)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{</span><span class="cpp1-space"> </span><span class="cpp1-comment">//socket.
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"socket"</span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"\n"</span><span class="cpp1-brackets">);
+
+
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// pristupove prava
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-20s: "</span><span class="cpp1-symbol">,</span><span class="cpp1-string">"pristupove prava"</span><span class="cpp1-brackets">);
+
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//vlastnik
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%c"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IRUSR</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">?</span><span class="cpp1-space"> </span><span class="cpp1-character">'r'</span><span class="cpp1-space"> </span><span class="cpp1-symbol">:</span><span class="cpp1-space"> </span><span class="cpp1-character">'-');</span><span class="cpp1-space">            
+	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%c"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IWUSR</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">?</span><span class="cpp1-space"> </span><span class="cpp1-character">'w'</span><span class="cpp1-space"> </span><span class="cpp1-symbol">:</span><span class="cpp1-space"> </span><span class="cpp1-character">'-');</span><span class="cpp1-space">   
+	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%c"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IXUSR</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">?</span><span class="cpp1-space"> </span><span class="cpp1-character">'x'</span><span class="cpp1-space"> </span><span class="cpp1-symbol">:</span><span class="cpp1-space"> </span><span class="cpp1-character">'-');</span><span class="cpp1-space">  
+
+	</span><span class="cpp1-comment">//skupina
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%c"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IRGRP</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">?</span><span class="cpp1-space"> </span><span class="cpp1-character">'r'</span><span class="cpp1-space"> </span><span class="cpp1-symbol">:</span><span class="cpp1-space"> </span><span class="cpp1-character">'-');</span><span class="cpp1-space">            
+	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%c"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IWGRP</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">?</span><span class="cpp1-space"> </span><span class="cpp1-character">'w'</span><span class="cpp1-space"> </span><span class="cpp1-symbol">:</span><span class="cpp1-space"> </span><span class="cpp1-character">'-');</span><span class="cpp1-space">   
+	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%c"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IXGRP</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">?</span><span class="cpp1-space"> </span><span class="cpp1-character">'x'</span><span class="cpp1-space"> </span><span class="cpp1-symbol">:</span><span class="cpp1-space"> </span><span class="cpp1-character">'-');</span><span class="cpp1-space">  
+
+	</span><span class="cpp1-comment">//ostatny
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%c"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IROTH</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">?</span><span class="cpp1-space"> </span><span class="cpp1-character">'r'</span><span class="cpp1-space"> </span><span class="cpp1-symbol">:</span><span class="cpp1-space"> </span><span class="cpp1-character">'-');</span><span class="cpp1-space">            
+	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%c"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IWOTH</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">?</span><span class="cpp1-space"> </span><span class="cpp1-character">'w'</span><span class="cpp1-space"> </span><span class="cpp1-symbol">:</span><span class="cpp1-space"> </span><span class="cpp1-character">'-');</span><span class="cpp1-space">   
+	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%c"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_mode</span><span class="cpp1-space"> </span><span class="cpp1-symbol">&amp;</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_IXOTH</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">?</span><span class="cpp1-space"> </span><span class="cpp1-character">'x'</span><span class="cpp1-space"> </span><span class="cpp1-symbol">:</span><span class="cpp1-space"> </span><span class="cpp1-character">'-');</span><span class="cpp1-space">  
+
+	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"\n"</span><span class="cpp1-brackets">);
+
+
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// pocet hardverovych liniek
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-20s: %d\n"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-string">"pocet hard. liniek"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_nlink);
+
+
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// cas
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-20s: %s"</span><span class="cpp1-symbol">,</span><span class="cpp1-string">"posledny pristup"</span><span class="cpp1-symbol">,</span><span class="cpp1-space">   </span><span class="cpp1-identifier">ctime(&amp;info.st_atime));</span><span class="cpp1-space"> 
+	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-20s: %s"</span><span class="cpp1-symbol">,</span><span class="cpp1-string">"posl. zmena udajov"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">ctime(&amp;info.st_mtime));</span><span class="cpp1-space"> 
+	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-20s: %s"</span><span class="cpp1-symbol">,</span><span class="cpp1-string">"posl. zmena stavu"</span><span class="cpp1-symbol">,</span><span class="cpp1-space">  </span><span class="cpp1-identifier">ctime(&amp;info.st_ctime));</span><span class="cpp1-space"> </span><span class="cpp1-comment">//zmena meta-udajov (cas posl. zmeny obsahu suboru, pristupove prava, vlastnictvo,.....)
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//preco nie je na konci formatovacieho retazca funkcie printf znak '\n'?
+
+
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// vlastnik
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-20s: "</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-string">"vlastnik"</span><span class="cpp1-brackets">);
+
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">((pwd</span><span class="cpp1-space"> </span><span class="cpp1-symbol">=</span><span class="cpp1-space"> </span><span class="cpp1-identifier">getpwuid(info.st_uid))</span><span class="cpp1-space"> </span><span class="cpp1-symbol">!=</span><span class="cpp1-space"> </span><span class="cpp1-identifier">NULL)
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-8.8s"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">pwd-&gt;pw_name);
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-8d"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-reservedword">int</span><span class="cpp1-brackets">)info.st_uid);
+
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"\n"</span><span class="cpp1-brackets">);
+
+
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// skupina
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-20s: "</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-string">"skupina"</span><span class="cpp1-brackets">);
+
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">if</span><span class="cpp1-space"> </span><span class="cpp1-brackets">((grp</span><span class="cpp1-space"> </span><span class="cpp1-symbol">=</span><span class="cpp1-space"> </span><span class="cpp1-identifier">getgrgid(info.st_gid))</span><span class="cpp1-space"> </span><span class="cpp1-symbol">!=</span><span class="cpp1-space"> </span><span class="cpp1-identifier">NULL)
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-8.8s"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">grp-&gt;gr_name);
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-8d"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-reservedword">int</span><span class="cpp1-brackets">)info.st_gid);
+
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"\n"</span><span class="cpp1-brackets">);
+
+
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// velkost:
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// v pripade regularneho suboru je to velkost suboru v bajtoch
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// v pripade symbolickej linky je to dlzka cesty v bajtoch 
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-20s: %d\n"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-string">"velkost"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-reservedword">int</span><span class="cpp1-brackets">)info.st_size);
+
+
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">// vypis cieloveho suboru linkylinky
+</span><span class="cpp1-space">	</span><span class="cpp1-comment">//------------------------------------------------------------------------
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">if</span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">S_ISLNK(info.st_mode)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{
+</span><span class="cpp1-space">		</span><span class="cpp1-reservedword">char</span><span class="cpp1-space"> </span><span class="cpp1-symbol">*</span><span class="cpp1-space"> </span><span class="cpp1-identifier">linkTarget</span><span class="cpp1-space"> </span><span class="cpp1-symbol">=</span><span class="cpp1-space"> </span><span class="cpp1-brackets">(</span><span class="cpp1-reservedword">char</span><span class="cpp1-space"> </span><span class="cpp1-symbol">*)</span><span class="cpp1-space"> </span><span class="cpp1-identifier">malloc((info.st_size+</span><span class="cpp1-number">1</span><span class="cpp1-brackets">)*</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">sizeof</span><span class="cpp1-brackets">(</span><span class="cpp1-reservedword">char</span><span class="cpp1-brackets">));
+</span><span class="cpp1-space">	
+		</span><span class="cpp1-reservedword">if</span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">readlink(fileName,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">linkTarget,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">info.st_size)</span><span class="cpp1-space"> </span><span class="cpp1-symbol">==</span><span class="cpp1-space"> </span><span class="cpp1-symbol">-</span><span class="cpp1-number">1</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{
+</span><span class="cpp1-space">			</span><span class="cpp1-identifier">fprintf(stderr,</span><span class="cpp1-space"> </span><span class="cpp1-string">"Chyba pri zistovani ciela linky (%s)\n"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">strerror(errno)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">);
+</span><span class="cpp1-space">			</span><span class="cpp1-identifier">exit(EXIT_FAILURE);</span><span class="cpp1-space">                                                                      	
+		</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">		
+		</span><span class="cpp1-identifier">linkTarget[info.st_size]</span><span class="cpp1-space"> </span><span class="cpp1-symbol">=</span><span class="cpp1-space"> </span><span class="cpp1-character">'\0';
+</span><span class="cpp1-space">		
+		</span><span class="cpp1-identifier">printf(</span><span class="cpp1-string">"%-20s: %s\n"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-string">"ciel linky"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">linkTarget);
+
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">free(linkTarget);
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+
+}
+
+</span><span class="cpp1-comment">//Program vypise informacie o subore, ktory je argumentom programu
+</span><span class="cpp1-reservedword">int</span><span class="cpp1-space"> </span><span class="cpp1-identifier">main(</span><span class="cpp1-reservedword">int</span><span class="cpp1-space"> </span><span class="cpp1-identifier">argc,</span><span class="cpp1-space"> </span><span class="cpp1-reservedword">char</span><span class="cpp1-space"> </span><span class="cpp1-symbol">*</span><span class="cpp1-space"> </span><span class="cpp1-identifier">argv[])
+{
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">if</span><span class="cpp1-brackets">(</span><span class="cpp1-space"> </span><span class="cpp1-identifier">argc</span><span class="cpp1-space"> </span><span class="cpp1-symbol">==</span><span class="cpp1-space"> </span><span class="cpp1-number">2</span><span class="cpp1-space"> </span><span class="cpp1-brackets">)</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">printfFileInfo(argv[</span><span class="cpp1-number">1</span><span class="cpp1-brackets">]);
+</span><span class="cpp1-space">		</span><span class="cpp1-reservedword">return</span><span class="cpp1-space"> </span><span class="cpp1-identifier">EXIT_SUCCESS;
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+</span><span class="cpp1-space">	</span><span class="cpp1-reservedword">else</span><span class="cpp1-space"> </span><span class="cpp1-brackets">{
+</span><span class="cpp1-space">		</span><span class="cpp1-identifier">fprintf(stderr,</span><span class="cpp1-space"> </span><span class="cpp1-string">"%s: chyny pocet argumentov\n"</span><span class="cpp1-symbol">,</span><span class="cpp1-space"> </span><span class="cpp1-identifier">argv[</span><span class="cpp1-number">0</span><span class="cpp1-brackets">]);
+</span><span class="cpp1-space">		</span><span class="cpp1-reservedword">return</span><span class="cpp1-space"> </span><span class="cpp1-identifier">EXIT_FAILURE;
+</span><span class="cpp1-space">	</span><span class="cpp1-brackets">}
+}
+
+
+</span></span>
+</code></pre>
+
+</body></html>
