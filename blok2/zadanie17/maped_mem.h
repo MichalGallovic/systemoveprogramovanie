@@ -91,7 +91,18 @@ void lockSem(int sem_num){
 	sops.sem_num = (unsigned short)sem_num; 
 	sops.sem_op = -1;
 	sops.sem_flg = 0;
-	CHECK(semop(semId, &sops, 1) != -1);
+	switch(semop(semId, &sops, 1)){
+		case 0:
+			break;
+		case -1:
+			if(errno == EINTR) {
+				CHECK(semop(semId, &sops, 1) != -1);  //handluje prichod signalu
+				return;
+			}
+		default:
+			fprintf(stderr, "Error: semop: %s\n", strerror(errno)); 
+			exit(EXIT_FAILURE);
+	}
 }
 
 void unlockSem(int sem_num){
@@ -99,5 +110,16 @@ void unlockSem(int sem_num){
 	sops.sem_num = (unsigned short)sem_num;
 	sops.sem_op = +1;
 	sops.sem_flg = 0;
-	CHECK(semop(semId, &sops, 1) != -1);
+	switch(semop(semId, &sops, 1)){
+		case 0:
+			break;
+		case -1:
+			if(errno == EINTR) {
+				CHECK(semop(semId, &sops, 1) != -1);  //handluje prichod signalu
+				return;
+			}
+		default:
+			fprintf(stderr, "Error: semop: %s\n", strerror(errno)); 
+			exit(EXIT_FAILURE);
+	}
 }

@@ -113,6 +113,11 @@ void ChildSignalHandler(){
 
 void doWork(){
 	struct sigaction sa;
+	sigset_t sigsetMask;
+
+	sigfillset(&sigsetMask);
+	sigdelset(&sigsetMask, SIGUSR1);
+	sigprocmask( SIG_BLOCK, &sigsetMask, NULL);
 	
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = &ChildSignalHandler;

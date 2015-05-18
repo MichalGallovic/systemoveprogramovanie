@@ -108,7 +108,7 @@ void shuffle(int *array, size_t n){
     }
 }
 
-void ChildSignalHandler(int signal_num){
+void ChildSignalHandler(){
 	quit = 0;
 }
 
@@ -117,13 +117,20 @@ void doWork(int position, int position1){
 	char buf1[4096];
 	char temp[20];
 	struct sigaction sa;
+	sigset_t sigsetMask;
+
 	buf[0] = '\0';
+ 
+	sigfillset(&sigsetMask);
+	sigdelset(&sigsetMask, SIGUSR1);
+	sigprocmask( SIG_BLOCK, &sigsetMask, NULL);
 	
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = &ChildSignalHandler;
 	CHECK(sigaction(SIGUSR1, &sa, NULL) ==  0);
 
 	while(quit){
+		
 		lockSem(position);
 		read_((char*)&buf1); //precita obsah pamate
 		sprintf((char*)&temp, "%u\n", getpid()); ///vytvori string z PID
@@ -163,8 +170,7 @@ void createProc(int number, pid_t* pid_array){
 		switch(pid = fork()){
 			case 0:
       			doWork(array[i], getNext(array, i + 1, number));
-      			fprintf(stderr, "Killed child...");
-				exit(EXIT_SUCCESS);
+			exit(EXIT_SUCCESS);
     		case -1:
       			perror("fork");
       			exit(EXIT_FAILURE);

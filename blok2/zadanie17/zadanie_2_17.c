@@ -135,8 +135,14 @@ void doWork(int position, int position1){
 	char buf1[4096];
 	char temp[20];
 	struct sigaction sa;
+	sigset_t sigsetMask;
+	
 	buf[0] = '\0';
 	
+	sigfillset(&sigsetMask);
+	sigdelset(&sigsetMask, SIGUSR1);
+	sigprocmask( SIG_BLOCK, &sigsetMask, NULL);
+
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = &ChildSignalHandler;
 	CHECK(sigaction(SIGUSR1, &sa, NULL) ==  0);
