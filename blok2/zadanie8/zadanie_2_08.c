@@ -86,14 +86,6 @@ int main(int argc, char * argv[]){
 // synchonizovane pomocou semaforou zapisuje pid do pamate/na obrazovku v infinite loope, 
 // ukonci sa po prijati signalu
 void processChild(int childId, int childrenNum) {
-	printf("proces child\n");
-	struct sigaction sa;
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_handler = sigUsr1Handler;
-	
-	// registruje handler pre SIGUSR1, ktory 
-	CHECK( sigaction(SIGUSR1, &sa, NULL) != -1);
-
 	waitSem( childId );	// caka na uvolnenie svojho semaforu
 
 	umask(0);
@@ -106,7 +98,7 @@ void processChild(int childId, int childrenNum) {
 	PIPE_MSG locMsg;
 	CHECK( read(fileDesc, &locMsg, sizeof(locMsg)) == sizeof(locMsg) );
 
-	printf("childId: %d -> befNum: %d, lastNum; %d, result: %d\n", childId, locMsg.befNum, locMsg.lastNum, locMsg.befNum + locMsg.lastNum);
+	printf("childId: %d -> i-1: %d, i; %d, i+1: %d\n", childId, locMsg.befNum, locMsg.lastNum, locMsg.befNum + locMsg.lastNum);
 	int temp = locMsg.befNum;
 	locMsg.befNum = locMsg.lastNum;
 	locMsg.lastNum = temp + locMsg.lastNum;
@@ -129,11 +121,6 @@ void processChild(int childId, int childrenNum) {
 
 }
 
-// nastavi flag podmienujuci infitie loop child procesu na 1
-void sigUsr1Handler() {
-	printf("handler\n");
-	childTerminationFlag = 1;	
-}
 
 // vytvori countArg pocet procesov, ktore budu synchronizovane mnozinou semaforou, vrati mnozinu ich pid
 void processProgramLogic(pid_t * childrenPids, int childrenNum) {
@@ -222,10 +209,10 @@ void printArgs(ARGS * args) {
 
 // vypise help
 void printHelp(FILE* stream) {
-fprintf(stream, "Usage: parametre [-h | --help][-c|--count][<count>]\n");
+fprintf(stream, "Usage: parametre [-h | --help]-c|--count<count>\n");
     fprintf(stream, "Prepinace:\n");
     fprintf(stream, " -h, --help  vypise help\n");
-    fprintf(stream, " -c, --count  umozni vykonat fcie obmedzeny pocet krat\n");
+    fprintf(stream, " -c, --count urci n-ty clen FIbonacciho postupnosti\n");
 }
 
 // vypis ehelp a ukonci program
@@ -236,23 +223,23 @@ void printHelpAndExit(FILE* stream, int exitCode) {
 // nacita vstupne prepinace/argumenty
 void parseArguments(int argc, char * argv[], ARGS * args) {
 	int opt;
-    struct option longOptions[] = {
-        {"help"	, no_argument, NULL, 'h'},
-        {"count", no_argument, NULL, 'c'},
-        {NULL	, 0			 , NULL, 0  }
-    };
+   	struct option longOptions[] = {
+        	{"help"	, no_argument, NULL, 'h'},
+        	{"count", no_argument, NULL, 'c'},
+        	{NULL	, 0			 , NULL, 0  }
+    	};
     
     // nacitaj parametre s prepinacom
     do {
         opt = getopt_long(argc, argv, ":hc:", longOptions, NULL);
         switch(opt) {
             case 'h':
-				args->h = SET;
-				printHelp(stdout);
+		args->h = SET;
+		printHelp(stdout);
                 break;
             case 'c':
-				args->c = SET;
-				args->countArgStr = optarg;
+		args->c = SET;
+		args->countArgStr = optarg;
                 break;
             case ':':
                 fprintf(stderr, "Chyba povinny argument prepinaca: %c\n", optopt);
