@@ -22,7 +22,7 @@ sem_wrapper semObj;	// "objekt" spravujuci mnozinu semaforov
 // inicializuje wrapper dany parametrom
 void initSemWrapper(sem_wrapper * semObj, int semNum) {
 	//  
-	semObj->sequence = (int *) malloc(semObj->count * sizeof(int));
+	//semObj->sequence = (int *) malloc(semObj->count * sizeof(int));
 	semObj->count = semNum;
 	
 	// vytvori mnozinu semaforov
@@ -35,14 +35,15 @@ void initSemWrapper(sem_wrapper * semObj, int semNum) {
 	int semId;
 	for(semId = 0; semId < semObj->count; semId++) {
 		semValues[semId] = 0;
-		semObj->sequence[semId] = semId;
+		//semObj->sequence[semId] = semId;
 	}
 	union semun semUnion;
 	semUnion.array = semValues;
 	CHECK( semctl(semObj->id, semObj->count, SETALL, semUnion) != -1);
 
 	free(semValues);
-
+	
+	/*
 	// nahodne premiesa poradie semaforov
 	int firstPos, secondPos, tempValue;
 	srand(time(NULL));
@@ -54,6 +55,7 @@ void initSemWrapper(sem_wrapper * semObj, int semNum) {
 		semObj->sequence[firstPos] = semObj->sequence[secondPos];
 		semObj->sequence[secondPos] = tempValue;
 	}
+	*/
 }
 
 // inicializuje globalny semObj
@@ -63,7 +65,7 @@ void initSem(int semNum) {
 
 void deinitSemWrapper(sem_wrapper * semObj) {
 	CHECK( semctl(semObj->id, IPC_RMID, 0) != -1 );
-	free(semObj->sequence);
+	//free(semObj->sequence);
 }
 
 // destruktor - uvolni dynamicky alokovanu pamat

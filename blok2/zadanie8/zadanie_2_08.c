@@ -18,8 +18,6 @@ typedef struct {
 	int lastNum;
 } PIPE_MSG;
 
-int childTerminationFlag = 0;	// flag, ktory podmienuje infinite loop child procesu, nastavi sa po prijati signalu
-
 #define FIFO_NAME "fifo-pipe_2" 
 
 /*************************** deklaracie funkcii **********************************/
@@ -60,23 +58,17 @@ int main(int argc, char * argv[]){
 	resetArguments(&args);
 	parseArguments(argc, argv, &args);
 	validateArguments(&args);
-	// printArgs(&args);
+	printArgs(&args);
 	
 	// inicializuje mnozinu semaforov
 	initSem(args.countArg);
 
-	printf("1\n");
 	// vytvori countArg pocet procesov, ktore budu synchronizovane mnozinou semaforou, vrati mnozinu ich pid
 	pid_t * childrenPids = (pid_t *) malloc(args.countArg * sizeof(pid_t));
 	processProgramLogic(childrenPids, args.countArg);
-	printf("2\n");
 
-	// pocka na ukoncovaci signal - SIGINT
+	// pocka na uvolnenie semaforu potom co posledny child vypocita fib. postupnost
 	waitForLastChildMsg(args.countArg);
-	printf("3\n");
-
-	// posledny child poslal spravu, preposli ukoncovaci signal vsetkym child procesom
-	//sendTermSignalToChildren(childrenPids, args.countArg);
 
 	// pocka na ukoncenie vsetkych child procesov
 	waitForChildrenTermination(args.countArg);
@@ -85,6 +77,7 @@ int main(int argc, char * argv[]){
 	// uprace pamat v ramci mnoziny semaforov
 	deinitSem();
 
+	unlink(FIFO_NAME);
 	return EXIT_SUCCESS;
 }
 
@@ -93,6 +86,7 @@ int main(int argc, char * argv[]){
 // synchonizovane pomocou semaforou zapisuje pid do pamate/na obrazovku v infinite loope, 
 // ukonci sa po prijati signalu
 void processChild(int childId, int childrenNum) {
+	printf("proces child\n");
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_handler = sigUsr1Handler;
@@ -100,35 +94,39 @@ void processChild(int childId, int childrenNum) {
 	// registruje handler pre SIGUSR1, ktory 
 	CHECK( sigaction(SIGUSR1, &sa, NULL) != -1);
 
-	printf("process child pred wait\n");
 	waitSem( childId );	// caka na uvolnenie svojho semaforu
-	printf("process child za wait\n");
 
 	umask(0);
-	CHECK( mkfifo(FIFO_NAME, S_IRUSR | S_IWUSR) != -1 );
+	CHECK( mkfifo(FIFO_NAME, S_IRUSR | S_IWUSR) != -1 || errno == EEXIST );
 
 	// otvor fifo
 	int fileDesc;
-	CHECK( (fileDesc = open(FIFO_NAME, O_CREAT | O_RDONLY | O_WRONLY)) != -1 );
+	CHECK( (fileDesc = open(FIFO_NAME, O_RDONLY)) != -1 );
 
-	// readFifo
 	PIPE_MSG locMsg;
-	CHECK( read(fileDesc, &locMsg, sizeof(locMsg)) != -1);
+	CHECK( read(fileDesc, &locMsg, sizeof(locMsg)) == sizeof(locMsg) );
 
+	printf("childId: %d -> befNum: %d, lastNum; %d, result: %d\n", childId, locMsg.befNum, locMsg.lastNum, locMsg.befNum + locMsg.lastNum);
 	int temp = locMsg.befNum;
 	locMsg.befNum = locMsg.lastNum;
 	locMsg.lastNum = temp + locMsg.lastNum;
-	printf("childId: %d -> befNum: %d, lastNum; %d, result: %d\n", childId, temp, locMsg.befNum, locMsg.lastNum);
+
+	// zatvori koniec ruri na citanie	
+	CHECK( close(fileDesc) != -1);
 	
+	int nextSem = childId +1;
+	if ( nextSem >= childrenNum ) nextSem = 0;	// posledny proces otvori semafor rodica
+	enableSem( nextSem );	// uvolni dalsi semafor/
+
+	// otvori koniec ruri na zapis
+	CHECK( (fileDesc = open(FIFO_NAME, O_WRONLY)) != -1 );
+
 	// posli spravu
-	CHECK( write(fileDesc, &locMsg, sizeof(locMsg)) != sizeof(locMsg) );
+	CHECK( write(fileDesc, &locMsg, sizeof(locMsg)) != -1 );
 
 	// closeFifo
 	CHECK( close(fileDesc) != -1 );
 
-	int nextSem = childId +1;
-	if ( nextSem > childrenNum ) nextSem = 0;	// posledny proces otvori semafor rodica
-	enableSem( nextSem );	// uvolni dalsi semafor
 }
 
 // nastavi flag podmienujuci infitie loop child procesu na 1
@@ -141,7 +139,6 @@ void sigUsr1Handler() {
 void processProgramLogic(pid_t * childrenPids, int childrenNum) {
 	pid_t pid;
 
-	/*
 	int childId;
 	// vytvori childrenNum detskych procesov
 	for(childId = 2; childId < childrenNum; childId++) {
@@ -155,30 +152,21 @@ void processProgramLogic(pid_t * childrenPids, int childrenNum) {
 				break;
 		}
 	}
-*/
 
+	enableSem( 2 );	// povoli prvy semafor
+	
 	// posle udaje pre prvy child proces
-	//umask(0);
+	umask(0);
 	CHECK( (mkfifo(FIFO_NAME, S_IRUSR | S_IWUSR) != -1) || (errno == EEXIST) );
-	printf("2-1\n");
 
 	// otvor fifo
 	int fileDesc;
-	printf(":(\n");
 	CHECK( (fileDesc = open(FIFO_NAME, O_WRONLY)) != -1 );
-
-	printf("2-2\n");
 
 	PIPE_MSG locMsg;
 	locMsg.befNum = 0;
 	locMsg.lastNum = 1;
-	CHECK( write(fileDesc, &locMsg, sizeof(locMsg)) != sizeof(locMsg) );
-	printf("2-3\n");
-	
-	CHECK( close(fileDesc) != -1 );
-	printf("2-4\n");
-
-	enableSem( 2 );	// povoli prvy semafor
+	CHECK( write(fileDesc, &locMsg, sizeof(locMsg)) != -1 );
 }
 
 // pocka na poslednu spravu od childa
@@ -191,14 +179,14 @@ void waitForLastChildMsg(int countNum) {
 	
 	// otvor fifo
 	int fileDesc;
-	CHECK( (fileDesc = open(FIFO_NAME, O_CREAT | O_RDONLY)) != -1 );
+	CHECK( (fileDesc = open(FIFO_NAME, O_RDONLY)) != -1 );
 
 	// zmaz fifo z pamate
-	unlink(FIFO_NAME);
+	//unlink(FIFO_NAME);
 
 	// readFifo
 	PIPE_MSG locMsg;
-	CHECK( read(fileDesc, &locMsg, sizeof(locMsg)) );
+	CHECK( read(fileDesc, &locMsg, sizeof(locMsg)) == sizeof(locMsg));
 
 	// pritnf result
 	printf("parent: posledny(%d) clen Fibonacciho postupnosti: %d\n", countNum, locMsg.lastNum);
@@ -231,20 +219,20 @@ void printArgs(ARGS * args) {
 	printf("\tcountArg: %d\n", args->countArg);
 }
 
+
 // vypise help
 void printHelp(FILE* stream) {
-	fprintf(stream, "Usage: parametre [-h | --help] -c|--count <countArg>\n");
+fprintf(stream, "Usage: parametre [-h | --help][-c|--count][<count>]\n");
     fprintf(stream, "Prepinace:\n");
     fprintf(stream, " -h, --help  vypise help\n");
-    fprintf(stream, " -c, --count <countArg> vytvori countArg pocet semaforov\n");
+    fprintf(stream, " -c, --count  umozni vykonat fcie obmedzeny pocet krat\n");
 }
 
 // vypis ehelp a ukonci program
 void printHelpAndExit(FILE* stream, int exitCode) {
-	 printHelp(stream);
-    exit(exitCode);
+	printHelp(stream);
+	exit(exitCode);
 }
-
 // nacita vstupne prepinace/argumenty
 void parseArguments(int argc, char * argv[], ARGS * args) {
 	int opt;
