@@ -2,6 +2,14 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <signal.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+
+void repeat();
 
 typedef enum 
 {
@@ -13,68 +21,178 @@ typedef enum
 void runInPipe(char *path, ChoiceType choice)
 {
     int fds[2]; //implement PIPE
-    int status;
     pipe(fds);
     
-    //two children do the job
-    //does not metter in which sequence
-    if (fork() == 0) 
+    switch(fork())
     {
-        close(0);
-        dup(fds[0]); // redirect standard input to fds[0]
-        close(fds[1]); // close unused end of pipe
-        if (execlp("wc","wc","-l",NULL) == -1)
-        {
-            printf("wc failed\n");
+        case -1:
+        {   
+            fprintf(stderr,"error fork");
+            break;
         }
-        exit(0);
-    } 
-    if (fork() == 0) 
-    {
-        close(1);
-        dup(fds[1]);    // redirect standard output to fds[1];
-        close(fds[0]);  // close unused end of pipe
-        switch(choice)
+        case 0:
         {
-            case Empty:
+            close(0);
+            dup(fds[0]); // redirect standard input to fds[0]
+            close(fds[0]);
+            close(fds[1]);  // close unused end of pipe
+            if (execlp("wc","wc","-l",NULL) == -1)
             {
-                fprintf(stderr,"Count of empty directories: \n");
-                if(execlp("find","find",path,"-type","d","-empty",NULL) == -1)
-                {
-                    printf("find empty failed\n");
-                }
-                break;
+                perror("wc failed\n");
+                exit(0);
             }
-            case NonEmpty:
-            {
-                fprintf(stderr,"Count of nonempty directories: \n");
-                if(execlp("find","find",path,"-not","-type","d","-empty",NULL) == -1)
-                {
-                    printf("find non-empty failed\n");
-                }
-                break;
-            }
-            case All:
-            {
-                fprintf(stderr,"Count of all directories: \n");
-                if(execlp("find","find",path,"-type","d",NULL) == -1)
-                {
-                    printf("find all failed\n");
-                }
-                break;
-            }
-            default:
-            {
-                fprintf(stderr,"error!!");
-                break;
-            }
+            exit(0);
+            break;
         }
-        exit(0); 
+        default:
+        {
+            switch(fork())
+            {
+                case -1:
+                {
+                    fprintf(stderr,"error fork");
+                    break;
+                }
+                case 0:
+                {
+                    close(1);
+                    dup(fds[1]);    // redirect standard output to fds[1];
+                    close(fds[1]);  // close unused end of pipe
+                    close(fds[0]);
+                    switch(choice)
+                    {
+                        case Empty:
+                        {
+                            fprintf(stderr,"Count of empty directories: \n");
+                            if(execlp("find","find",path,"-type","d","-empty",NULL) == -1)
+                            {
+                                printf("find empty failed\n");
+                            }
+                            break;
+                        }
+                        case NonEmpty:
+                        {
+                            fprintf(stderr,"Count of nonempty directories: \n");
+                            if(execlp("find","find",path,"-not","-type","d","-empty",NULL) == -1)
+                            {
+                                printf("find non-empty failed\n");
+                            }
+                            break;
+                        }
+                        case All:
+                        {
+                            fprintf(stderr,"Count of all directories: \n");
+                            if(execlp("find","find",path,"-type","d",NULL) == -1)
+                            {
+                                printf("find all failed\n");
+                            }
+                            break;
+                        }
+                        default:
+                        {
+                            fprintf(stderr,"error!!");
+                            exit(0);
+                            break;
+                        }
+                    }
+                    break;
+                }
+                default:
+                {
+                    close(1);
+                    close(0);  
+                    int status;
+                    waitpid(-1,&status,0);
+                    if(status == 0 || status == 1)
+                        repeat(); 
+                    else
+                        fprintf(stderr,"end\n");
+                        exit(0);
+                    break;
+                }
+            }
+            break;
+        }
     }
-    close(0);
-    close(1);           // parent
-    waitpid(-1, &status, 0);
-    // parent is waiting for both childre)
+}
+
+sig_atomic_t child_status = 0;
+
+void handler(int signal_number)
+{
+    int status;
+    wait(&status);
+    child_status = status;
+}
+
+void forwarding()
+{
+    //create a signal;
+    struct sigaction sa;
+    memset(&sa, 0,sizeof(sa));
+    sa.sa_handler = &handler;
+    sigaction(SIGCHLD, &sa, NULL);
+    
+    switch(fork())
+    {
+        case -1: 
+        {
+            fprintf(stderr,"error creating pid");
+            break;
+        }
+        case 0:
+        {
+            fprintf(stderr,"input your command:\n");
+            int fd;
+            char *namedFifo = "/tmp/myfifo1";
+            mkfifo(namedFifo,0666);
+           // fd = open(namedFifo, O_WRONLY);
+            
+//            char str1[100];
+//            scanf("%s",str1);
+            
+//            write(fd, "hello",sizeof("hello"));
+           // close(fd);
+            
+            unlink(namedFifo);
+            exit(1);
+            break;
+        }
+        default:
+        {
+            while(!child_status);
+            /*
+            int fd;
+            char *namedFifo = "/tmp/myfifo1";
+            char buf[100];
+            fd = open(namedFifo, O_RDONLY);
+            read(fd, buf,100);
+            fprintf(stderr,"received command: %s",buf);
+            close(fd);
+            */
+            break;
+        }
+    }
+}
+
+void repeat()
+{
+    char str[3];
+    fprintf(stderr,"continue?(yes/no): ");
+    scanf("%s",str);
+    if (strcmp(str,"yes") == 0)
+    {
+        forwarding();       
+    }
+    else if (strcmp(str,"no") == 0)
+    {
+        exit(0);
+    }
+    else
+    {
+        fprintf(stderr, "Please write yes or no\n");
+        repeat();
+    }
 }
 
 void handlePath(char *path, int showEmpty)
