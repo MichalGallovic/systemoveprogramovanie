@@ -15,6 +15,44 @@
 
 #define CHECK(command) if( ! (command) ) { fprintf(stderr, "Error: '%s' at %s line %d: %s\n", #command, __FILE__, __LINE__, strerror(errno)); exit(EXIT_FAILURE); }
 
+//Vypisanie informacii o symbolickej linke a jej cieli
+void followLinkToTarget(char * linkName) {
+    struct stat info;
+    CHECK(lstat(linkName, &info) != -1);
+    
+    // cielova adresa kam ukazuje linka
+    char *link;
+    link = strdup(settings->symbolicLink);
+    assert(link != NULL);
+
+    char *target;
+    size_t length;
+    char *directory;
+    while(1) {
+        printf("hladanie ciela: %s\n", link);
+        CHECK( lstat(link, &info) != -1);
+        if(S_ISLNK(info.st_mode) ) {
+            directory = dirname(strdup(link));
+            length = strlen(directory) + 1 + info.st_size + 1;
+            target = (char *) malloc(length * sizeof(char));
+            assert(target != NULL);
+            strcpy(target, directory);
+            strcat(target,"/");
+
+            CHECK( readlink(link, target+strlen(target), info.st_size) != -1 );
+
+            free(link);
+            link = target;
+        } else {
+            break;
+        }
+    }
+
+    printf("ciel linky: %s", link);
+    free(link);
+}
+
+
 void listDir(char *nazovPriecinka) {
     DIR *dir;
     struct dirent *entry;
