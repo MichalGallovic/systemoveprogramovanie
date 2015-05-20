@@ -99,13 +99,17 @@ void validateArgs(ARGS * args) {
 void ChildSignalHandler(int signal_num){
     quit = 0;
 }
-
-void printNthLineFromShm(int nth) {
+int getReverseOrder(int normalOrder, int count) {
+    if((normalOrder-1)  == 0) return count;
+    return (normalOrder-1)%count;
+}
+void printNthLineFromShm(int nth, int count) {
     char buff[4096];
     int newLinesCount  = 0;
     int offset = 0;
     read_((int*)buff);
     unsigned int i;
+    nth = getReverseOrder(nth,count);
     for(i = 0; i< strlen(buff); i++) {
         if(buff[i] == '\n')
             newLinesCount++;
@@ -162,10 +166,10 @@ void doWork(char *text, int count){
     order = getProcOrder();
     usleep(100000);
     unlockMutex();
-    fprintf(stderr,"%d %d\n", order, getProcSem(order, count));
+    
     while(quit) {
         lockSem(order);
-        printNthLineFromShm(order);
+        printNthLineFromShm(order, count);
         usleep(100000);
         unlockSem(getProcSem(order, count));
     }
